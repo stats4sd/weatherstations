@@ -1,15 +1,12 @@
-const express = require('express');
 const bodyParser = require('body-parser');
 const fs = require('fs');
-// const csv=require('csvtojson')
-const request=require('request')
-const d3 = require('d3-dsv')
+const request = require('request');
+const d3 = require('d3-dsv');
 
 
 // *****************************************************
 // Define Read / Write Functions
 // *****************************************************
-
 
 // reads data from file
 // Requires:
@@ -43,7 +40,7 @@ async function write(path,content) {
 
 // main function to run.
 // This is wrapped in an "async" function to allow the read/write functions to work with "await" command.
-async function main() {
+async function main(req,res) {
 
     // const path = "./_data/Datos estacion Calahuancane.csv";
     const path = "./_data/Chinchaya (14_09_2018).csv"
@@ -66,29 +63,13 @@ async function main() {
     })
 
     const outData = d3.csvFormat(parsedData);
-    const newPath = "./_data/Chinchaya (14_09_2018) - Changed Dates.csv"
+    const newPath = "./uploads/Chinchaya (14_09_2018) - Changed Dates.csv"
 
     write(newPath, outData);
+    res.sendStatus(200);
 
 }
 
-
-main();
-
-
-//*** Stuff below here is only for when we want to run this on a server ***//
-//
-//
-// const app = express()
-
-// app.use(express.static('public'))
-// app.use(bodyParser.json())
-
-
-
-
-
-
-// app.listen(7555, () => {
-//     console.log("Server running on http://localhost:7555");
-// })
+module.exports.main = main;
+module.exports.read = read;
+module.exports.write = write;
