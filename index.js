@@ -66,7 +66,7 @@ async function main() {
     })
 
     const outData = d3.csvFormat(parsedData);
-    const newPath = "./_data/Chinchaya (14_09_2018) - Changed Dates.csv"
+    const newPath = "./_data/Chinchaya(14_09_2018) - Dates.csv"
 
     write(newPath, outData);
 
