@@ -182,10 +182,9 @@ async function main() {
 
         // parsedData now has the correct columns for import;
 
-        insertToTable(connection,newItem,processResult);
+        insertToTable(connection,parsedData);
 
 
-        console.log("done");
     })
 
 }
@@ -194,29 +193,39 @@ async function main() {
 main();
 
 
-async function insertToTable(connection, newItem,callback){
+async function insertToTable(connection, parsedData){
 
     //for import, values must be in a nested array (in the correct order);
 
-    const columnHeaders = newItem[0].keys();
-    console.log("column Headers = ",columnHeaders);
+    const columnHeaders = Object.keys(parsedData[0]);
 
-    return;
+    //for the INSERT statement, column headers need to be a string in the format (`col1`, `col2`, `col3` etc).
+    let columnString = columnHeaders.join("`,`")
+    //add the brackets and ` to the start and end of the string
+    columnString = "(`"+columnString+"`)";
+
+    // prepare values as nested array;
+    const insertValues = parsedData.map( (item,index) => {
+        return Object.values(item);
+    })
+
+    // prepare queryString (including column headers as string).
+    const queryString = "INSERT INTO `chinas-davis` " + columnString + " VALUES ?";
+
 
     //Select all customers and return the result object:
-    connection.query("INSERT INTO `chinas-davis` SET ?;", newItem, function (err, result, fields){
+    connection.query(queryString, insertValues, function (err, result, fields){
         if (err) {
             console.log("err",err);
         }
         else {
-            callback(null,result);
+            console.log("result:", result);
+            console.log("done");
         }
     });
 }
 
-function processResult(err,result){
-    console.log(result)
-}
+
 //*** Stuff below here is only for when we want to run this on a server ***//
 //
 //
