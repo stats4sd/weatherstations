@@ -60,8 +60,6 @@ async function main() {
     const rawData = await read(path);
 
     console.log("rawData",rawData)
-    return; 
-    
     let parsedData = d3.tsvParse(rawData);
 
     // parsedData = parsedData.map( (item,index) => {
