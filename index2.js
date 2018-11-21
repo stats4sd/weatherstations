@@ -54,77 +54,80 @@ async function write(path,content) {
 // This is wrapped in an "async" function to allow the read/write functions to work with "await" command.
 async function main() {
 
-     //const path = "./_data/Datos estacion Calahuancane.csv";//date modificated-dates.cvs
-     const path = "C:/Users/LuciaFalcinelli/Documents/GitHub/weatherstations/_data/Chinchaya(14_09_2018) - Dates.csv"
+    //const path = "./_data/Datos estacion Calahuancane.csv";//date modificated-dates.cvs
+    const path = "C:/Users/LuciaFalcinelli/Documents/GitHub/weatherstations/_data/Chinchaya(14_09_2018) - Dates.csv"
 
-     const rawData = await read(path);
+    const rawData = await read(path);
 
-     console.log("rawData",rawData)
+    console.log("rawData",rawData)
 
-     let parsedData = d3.csvParse(rawData);
+    let parsedData = d3.csvParse(rawData);
 
- //     parsedData = parsedData.map( (item,index) => {
+    //     parsedData = parsedData.map( (item,index) => {
 
- //         const date = item["Fecha/Hora"]
-         
-
- //         console.log( date );
-
- //         // hack for now - assume WHATEVER date comes in is "GMT"
- //         var parsedDate  = new Date(date);
- //         parsedDate = parsedDate.format("isoDateTime");
- //         console.log(parsedDate);
-         
- //         //dateString = dateString.substr(6, 4)+"-"+dateString.substr(3, 2)+"-"+dateString.substr(0, 2);
- //         //console.log(dateString);
-         
-         
+    //         const date = item["Fecha/Hora"]
 
 
- //       // item["Timestamp"] = parsedDate.toISOString();
+    //         console.log( date );
+
+    //         // hack for now - assume WHATEVER date comes in is "GMT"
+    //         var parsedDate  = new Date(date);
+    //         parsedDate = parsedDate.format("isoDateTime");
+    //         console.log(parsedDate);
+
+    //         //dateString = dateString.substr(6, 4)+"-"+dateString.substr(3, 2)+"-"+dateString.substr(0, 2);
+    //         //console.log(dateString);
 
 
- //         // rename headers from Chinas stations
- //        // item["temperatura_interna"] = item["Temperatura Interna(°C)"];
- //         //delete item["Temperatura Interna(°C)"];
-
- //    //     delete item["Fecha/Hora"]
-
- //     //    return item
- // })
 
 
-     //const outData = d3.csvFormat(parsedData);
-     //const newPath = "./_data/Chinchaya(14_09_2018) - Dates.csv"
+    //       // item["Timestamp"] = parsedDate.toISOString();
 
-     // write(newPath, outData);
 
-   // console.log("parsed data is ", JSON.stringify(parsedData) )
+    //         // rename headers from Chinas stations
+    //        // item["temperatura_interna"] = item["Temperatura Interna(°C)"];
+    //         //delete item["Temperatura Interna(°C)"];
 
-   con.getConnection((err, connection) => {
-        //test with just intervalo 
+    //    //     delete item["Fecha/Hora"]
+
+    //     //    return item
+    // })
+
+
+    //const outData = d3.csvFormat(parsedData);
+    //const newPath = "./_data/Chinchaya(14_09_2018) - Dates.csv"
+
+    // write(newPath, outData);
+
+    // console.log("parsed data is ", JSON.stringify(parsedData) )
+
+    con.getConnection((err, connection) => {
+
+    if (err) throw err;
+
+        //test with just intervalo
         parsedData = parsedData.map( (item, index) => {
             var newItem = {}
-     //       newItem['intervalo'] = item['Intervalo'];
-     //       newItem['fecha_hora'] = item['Fecha/Hora'];
-     //       newItem['temperatura_interna'] = item['Temperatura Interna(°C)'];
-     //       newItem['humedad_interna'] = item['Humedad Interna(%)'];
-     //       newItem['temperatura_externa'] = item['Temperatura Externa(°C)'];
-     //       newItem['humedad_externa'] = item['Humedad Externa(%)'];
-     //       newItem['presion_relativa'] = item['Presión Relativa(hpa)'];
-     //       newItem['presion_absoluta'] = item['Presión Absoluta(hpa)'];
-     //       newItem['velocidad_viento'] = item['Velocidad del viento(m/s)'];
-     //       newItem['sensacion_termica'] = item['Sensación Térmica(°C)'];
-     //       newItem['rafaga'] = item['Ráfaga(m/s)'];
-     //       newItem['direccion_del_viento'] = item['Dirección del viento'];
-     //       newItem['punto_rocio'] = item['Punto de Rocío(°C)'];
-     //       newItem['lluvia_hora'] = item['Lluvia hora(mm)'];
-     //       newItem['lluvia_24_horas'] = item['Lluvia 24 horas(mm)'];
-     //       newItem['lluvia_semana'] = item['Lluvia semana(mm)'];
-     //       newItem['lluvia_mes'] = item['Lluvia mes(mm)'];
-     //       newItem['lluvia_total'] = item['Lluvia Total(mm)'];
+            // newItem['intervalo'] = item['Intervalo'];
+            // newItem['fecha_hora'] = item['Fecha/Hora'];
+            // newItem['temperatura_interna'] = item['Temperatura Interna(°C)'];
+            // newItem['humedad_interna'] = item['Humedad Interna(%)'];
+            // newItem['temperatura_externa'] = item['Temperatura Externa(°C)'];
+            // newItem['humedad_externa'] = item['Humedad Externa(%)'];
+            // newItem['presion_relativa'] = item['Presión Relativa(hpa)'];
+            // newItem['presion_absoluta'] = item['Presión Absoluta(hpa)'];
+            // newItem['velocidad_viento'] = item['Velocidad del viento(m/s)'];
+            // newItem['sensacion_termica'] = item['Sensación Térmica(°C)'];
+            // newItem['rafaga'] = item['Ráfaga(m/s)'];
+            // newItem['direccion_del_viento'] = item['Dirección del viento'];
+            // newItem['punto_rocio'] = item['Punto de Rocío(°C)'];
+            // newItem['lluvia_hora'] = item['Lluvia hora(mm)'];
+            // newItem['lluvia_24_horas'] = item['Lluvia 24 horas(mm)'];
+            // newItem['lluvia_semana'] = item['Lluvia semana(mm)'];
+            // newItem['lluvia_mes'] = item['Lluvia mes(mm)'];
+            // newItem['lluvia_total'] = item['Lluvia Total(mm)'];
 
-// data from MODDatos estacion Calahuancane
+            // data from MODDatos estacion Calahuancane
             newItem['fecha_hora'] = item['Fecha/Hora'];
             newItem['hi_temp'] = item['Hi_Temp'];
             newItem['low_temp'] = item['Low_Temp'];
@@ -154,7 +157,7 @@ async function main() {
             newItem['in_air_density'] = item['In_Air_Density'];
             newItem['evapotran'] = item['ET'];
             newItem['soil_1_moist'] = item['Soil_1_Moist.'];
-            newItem['soil_2_moist'] = item['Soil_2_Moist.']; 
+            newItem['soil_2_moist'] = item['Soil_2_Moist.'];
             newItem['leaf_wet1'] = item['Leaf_Wet_1'];
             newItem['wind_samp']=item['Wind_Samp'];
             newItem['wind_tx'] = item['Wind_Tx'];
@@ -167,17 +170,8 @@ async function main() {
             newItem['punto_rocio'] = item['Dew_Pt.'];
             newItem['humedad_externa'] = item['Out_Hum'];
             newItem['temperatura_externa'] = item['Temp_Out'];
-        
 
-
-
-
-
-
-
-        if (err) throw err;
-
-        insertToTable(connection,newItem,processResult);
+            insertToTable(connection,newItem,processResult);
 
     })
 
