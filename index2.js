@@ -7,11 +7,15 @@ const d3 = require('d3-dsv')
 
 var mysql = require('mysql');
 
+const config = require('./config')
+
+console.log("config",config);
+
 var con = mysql.createPool({
     host: "localhost",
-    user: "root",
-    password: "Logoslogos88",
-    database: "umsa"
+    user: config.config.username,
+    password: config.config.password,
+    database: config.config.database
 });
 
 
@@ -55,11 +59,11 @@ async function write(path,content) {
 async function main() {
 
     //const path = "./_data/Datos estacion Calahuancane.csv";//date modificated-dates.cvs
-    const path = "C:/Users/LuciaFalcinelli/Documents/GitHub/weatherstations/_data/Chinchaya(14_09_2018) - Dates.csv"
+    const path = "./_data/Chinchaya(14_09_2018) - Dates.csv"
 
     const rawData = await read(path);
 
-    console.log("rawData",rawData)
+    //console.log("rawData",rawData)
 
     let parsedData = d3.csvParse(rawData);
 
@@ -171,12 +175,18 @@ async function main() {
             newItem['humedad_externa'] = item['Out_Hum'];
             newItem['temperatura_externa'] = item['Temp_Out'];
 
-            insertToTable(connection,newItem,processResult);
 
+            // return the newItem (adds to array returned from map)
+            return newItem;
+        })
+
+        // parsedData now has the correct columns for import;
+
+        insertToTable(connection,newItem,processResult);
+
+
+        console.log("done");
     })
-
-    console.log("done");
-})
 
 }
 
@@ -185,6 +195,14 @@ main();
 
 
 async function insertToTable(connection, newItem,callback){
+
+    //for import, values must be in a nested array (in the correct order);
+
+    const columnHeaders = newItem[0].keys();
+    console.log("column Headers = ",columnHeaders);
+
+    return;
+
     //Select all customers and return the result object:
     connection.query("INSERT INTO `chinas-davis` SET ?;", newItem, function (err, result, fields){
         if (err) {
