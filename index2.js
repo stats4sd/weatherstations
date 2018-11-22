@@ -57,7 +57,7 @@ async function write(path,content) {
 async function main() {
 
     //const path = "./_data/Datos estacion Calahuancane.csv";//date modificated-dates.cvs
-    const path = "./_data/Chinchaya(14_09_2018) - Dates.csv"
+    const path = "./_data/Dates.csv"
 
     const rawData = await read(path);
 
@@ -195,12 +195,18 @@ async function main() {
                     newItem['temperatura_externa'] = item['Temp_Out'];
                 }
 
+
+            if (err) throw err;
+
+            insertToTable(connection,newItem,processResult);
+
             // return the newItem (adds to array returned from map)
-            return newItem;
+            //return newItem;
         })
         // parsedData now has the correct columns for import;
 
-        insertToTable(connection,parsedData);
+        
+        //insertToTable(connection,parsedData);
 
 
     })
@@ -210,27 +216,75 @@ async function main() {
 
 main();
 
+async function insertToTable(connection, newItem,callback){
+    //Select all customers and return the result object:
+    connection.query("INSERT INTO `chinas-davis` SET ?;", newItem, function (err, result, fields){
+        if (err) {
+            console.log("err",err);
+        }
+        else {
+            callback(null,result);
+        }
+    });
+}
 
-async function insertToTable(connection, parsedData){
+function processResult(err,result){
+    console.log(result)
+}
+//*** Stuff below here is only for when we want to run this on a server ***//
+//
+//
+// const app = express()
+
+// app.use(express.static('public'))
+// app.use(bodyParser.json())
+
+
+
+
+
+
+
+
+
+
+
+
+//function processResult(err,result){
+  //  console.log(result)
+//}
+//*** Stuff below here is only for when we want to run this on a server ***//
+//
+//
+// const app = express()
+
+// app.use(express.static('public'))
+// app.use(bodyParser.json())
+
+
+
+
+
+//async function insertToTable(connection, parsedData){
 
     //for import, values must be in a nested array (in the correct order);
    // console.log(parsedData[0]);
 
 
 
-    const columnHeaders = Object.keys(parsedData[0]);
+   //const columnHeaders = Object.keys(parsedData[0]);
 
     //for the INSERT statement, column headers need to be a string in the format (`col1`, `col2`, `col3` etc).
-    let columnString = columnHeaders.join("`,`")
+   // let columnString = columnHeaders.join("`,`")
     //add the brackets and ` to the start and end of the string
-    columnString = "(`"+columnString+"`)";
+    //columnString = "(`"+columnString+"`)";
 
     // prepare values as nested array;
 
 
-    const insertValues = parsedData.map( (item,index) => {
-        return Object.values(item);
-    })
+   // const insertValues = parsedData.map( (item,index) => {
+    //    return Object.values(item);
+  //  })
 
     // console.log("insertingValues",insertValues);
 
@@ -239,35 +293,36 @@ async function insertToTable(connection, parsedData){
     //divide a half file and run 
    //let valueTot = Number(insertValues.length)
     //console.log("valuetot ",valueTot / 10000)
-   // let limit = 10000
-    let partialInsert = insertValues.slice(29001, 29500)
+    //let limit = 10000
+  //  let partialInsert = insertValues.slice(144001,144563)
 
     
-  //  for(i = 0; i <= valueTot - 1 ; i = limit+1){
+   // for(i = 0; i <= valueTot - 1 ; i = limit+1){
 
- //       partialInsert = insertValues.slice(i, limit * 2);
+    //    partialInsert = insertValues.slice(i, limit * 2);
 
-  //      limit = limit * 2; 
+ //    limit = limit*2
         
 //}
 
     // prepare queryString (including column headers as string).
-    const queryString = "INSERT INTO `chinas-davis` " + columnString + " VALUES ?";
+//    const queryString = "INSERT INTO `chinas-davis` " + columnString + " VALUES ?"; //chinas-davis
 
 
     //Select all customers and return the result object:
-    connection.query(queryString, [partialInsert], function (err, result, fields){
-        if (err) {
-            console.log("err",err);
-            connection.release();
-        }
-        else {
-            console.log("result:", result);
-            console.log("done");
-            connection.release();
-        }
-    });
-}
+ //   connection.query(queryString, [insertValues], function (err, result, fields){ //partialInsert
+//        if (err) {
+ //           console.log("err",err);
+  //          write("./_data/error.txt",err);
+ //           connection.release();
+  //      }
+  //      else {
+  //          console.log("result:", result);
+  //          console.log("done");
+  //          connection.release();
+    //    }
+   // });
+//}
 
 
 //*** Stuff below here is only for when we want to run this on a server ***//
