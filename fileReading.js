@@ -30,3 +30,6 @@ async function write(path,content) {
         })
     })
 }
+
+module.exports.read = read;
+module.exports.write = write;

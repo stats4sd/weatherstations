@@ -10,19 +10,24 @@ const upload = multer({
 
 //*** Stuff below here is only for when we want to run this on a server ***//
 
-const app = express()
+function init() {
+
+    const app = express()
 
 
-app.use(express.static('public'))
+    app.use(express.static('public'))
 
 
-app.use(bodyParser.json())
+    app.use(bodyParser.json())
 
 
-//file uploader
-app.post('/upload', upload.single('customFile'), rw.main);
+    //file uploader
+    app.post('/upload', upload.single('customFile'), rw.main);
 
 
-app.listen(port, () => {
-    console.log(`Server running on port ${port}`);
-})
+    app.listen(port, () => {
+        console.log(`Server running on port ${port}`);
+    })
+}
+
+exports.init = init;

@@ -3,15 +3,7 @@ const fs = require('fs');
 const request = require('request');
 const d3 = require('d3-dsv');
 
-const
-
 console.log("app", app);
-return;
-
-
-
-
-
 
 
 // main function to run.
@@ -47,5 +39,4 @@ async function main(req,res) {
 }
 
 module.exports.main = main;
-module.exports.read = read;
-module.exports.write = write;
+
