@@ -18,19 +18,30 @@ var con = mysql.createConnection({
     database: config.config.database
 });
 
+var con_dates = mysql.createPool({
+    host: "localhost",
+    user: config.config.username,
+    password: config.config.password,
+    database: config.config.database
+});
+
 
 // *****************************************************
 // Define Read / Write Functions
 // *****************************************************
 
 
+
+
+
 // reads data from file
 // Requires:
 //  - path: path to file (string)
 
-async function read(path) {
+
+async function read(path,encoding) {
     return new Promise((resolve, reject) => {
-        fs.readFile(path, "utf8", (err, data) => { // utf16le or utf8
+        fs.readFile(path, encoding, (err, data) => { // utf16le or utf8
             if (err){
                 throw err;
             }
@@ -60,15 +71,37 @@ async function write(path,content) {
 async function main() {
 
     // const path = "./_data/Datos estacion Calahuancane.csv";
-    const path = "C:/Users/LuciaFalcinelli/Documents/GitHub/weatherstations/_data/MODDatos estacion Calahuancane.csv"
+    const path = "C:/Users/LuciaFalcinelli/Documents/GitHub/weatherstations/_data/Chinchaya.csv"
 
-    const rawData = await read(path);
+    const rawData = await read(path,"utf8");//utf8 or utf18le codeutf
 
-//
-//console.log("rawData",rawData)
+
+
 
     //check comma or space
-    let parsedData = d3.csvParse(rawData); // csv or tsc
+
+    let title = Object.keys(rawData[8])
+    console.log(title)
+    let typeofTable = true;
+
+    if(rawData[0].indexOf(',') > -1) {
+            typeOfTable = false;
+
+        }
+        else if(rawData[0].indexOf('|') > -1){
+           typeOfTable = true;
+        }
+console.log(typeofTable)
+   
+    let parsedData = d3.csvParse(rawData);
+        if(typeofTable){ 
+        parsedData = d3.tsvParse(rawData); // csv or tsc
+          }else if(!typeofTable){
+            parsedData = d3.csvParse(rawData);
+
+   }   
+
+
 
     let numberOne = [];
     let numberTwo = [];
@@ -76,10 +109,46 @@ async function main() {
     let dates = [];
     let isoDates = [];
 
+    // check if file is from Davis(True) or China(False) Station
+
+    let typeOfStation = true
+    let countColumn = Object.keys(parsedData[0]).length
+
+
+    if(countColumn > 40 ){
+
+        typeOfStation = true ;
+
+         }else{
+
+            typeOfStation = false;
+        
+    }
+
+    //creates column Fecha/Hora in file davis
+
+    if(typeOfStation){
+        parsedData = parsedData.map( (item, index) => {
+           
+        const date = item["Date"];
+        const hour = item["Time"];
+ 
+        item["Fecha/Hora"] = date + " " + hour;
+
+
+        return item
+        
+        })
+    }
+
+
+
+
 
    // console.log(parsedData)
 
     parsedData = parsedData.map( (item,index) => {
+
 
         Object.keys(item).forEach((key,i) => {
             
@@ -92,11 +161,9 @@ async function main() {
 
             }
         })
+        
         const date = item["Fecha/Hora"];
-      //  console.log(date)
-
-        // check format of date
-        // let dateArray = [];
+   
         // check if '/' or '-' exist and create an array with the following elements: dd, mm, yyyy hh:mm:ss
         if(date.indexOf('/') > -1) {
             dateArray = date.split('/');
@@ -104,6 +171,7 @@ async function main() {
         else if(date.indexOf('-') > -1){
             dateArray = date.split('-');
         }
+
         
 
 
@@ -161,10 +229,8 @@ async function main() {
       // check month and hour length and adds 0 where it is missing 
 
         parsedData = parsedData.map((item, index) => {
-            str = ""
-            str = (dates[index])
-
-            length = str.length
+         
+            length = dates[index].length
             //console.log("length", length)
            
             if(length == 1){
@@ -200,7 +266,7 @@ async function main() {
         // substitute ISO format dates in the Fecha/Hora column  
         parsedData = parsedData.map((item, index) =>{
 
-            item["Fecha/Hora"] = isoDates[index]
+            item["Fecha/Hora"] = isoDates[index] 
     
             return item
     
@@ -211,11 +277,11 @@ async function main() {
 
     // create new file with new dates
 
-    const outData = d3.csvFormat(parsedData);
+  //  const outData = d3.csvFormat(parsedData);
 
-    const newPath = "./_data/Chinchaya(14_09_2018) - Dates.csv"
+   // const newPath = "./_data/Dates.csv"
 
-    write(newPath, outData);
+    //await write(newPath, outData);
 
     // console.log("parsed data is ", JSON.stringify(parsedData) )
 
@@ -231,10 +297,199 @@ async function main() {
     //     });
     // });
 
+
+
+// strat second part
+
+  //  const path_dates = d3.csvFormat(parsedData);
+
+  //  const rawData_dates = await read(path_dates);
+
+ //   let parsedData_dates = d3.csvParse(rawData_dates);
+
+    con_dates.getConnection((err, connection) => {
+
+        if (err) throw err;
+
+        //test with just intervalo
+        parsedData = parsedData.map( (item, index) => {
+            var newItem = {}
+
+
+            if(!typeOfStation){
+                newItem['intervalo'] = item['Intervalo'];
+                newItem['fecha_hora'] = item['Fecha/Hora'];
+                newItem['temperatura_interna'] = item['Temperatura Interna(°C)'];
+                newItem['humedad_interna'] = item['Humedad Interna(%)'];
+                newItem['temperatura_externa'] = item['Temperatura Externa(°C)'];
+                newItem['humedad_externa'] = item['Humedad Externa(%)'];
+                newItem['presion_relativa'] = item['Presión Relativa(hpa)'];
+                newItem['presion_absoluta'] = item['Presión Absoluta(hpa)'];
+                newItem['velocidad_viento'] = item['Velocidad del viento(m/s)'];
+                newItem['sensacion_termica'] = item['Sensación Térmica(°C)'];
+                newItem['rafaga'] = item['Ráfaga(m/s)'];
+                newItem['direccion_del_viento'] = item['Dirección del viento'];
+                newItem['punto_rocio'] = item['Punto de Rocío(°C)'];
+                newItem['lluvia_hora'] = item['Lluvia hora(mm)'];
+                newItem['lluvia_24_horas'] = item['Lluvia 24 horas(mm)'];
+                newItem['lluvia_semana'] = item['Lluvia semana(mm)'];
+                newItem['lluvia_mes'] = item['Lluvia mes(mm)'];
+                newItem['lluvia_total'] = item['Lluvia Total(mm)'];
+
+                    }else if(typeOfStation){
+            
+            // data from MODDatos estacion Calahuancane
+            
+                    newItem['fecha_hora'] = item['Fecha/Hora'];
+                    newItem['hi_temp'] = item['Hi_Temp'];
+                    newItem['low_temp'] = item['Low_Temp'];
+                    newItem['wind_cod'] =  item['Wind_Cod'];
+                    newItem['wind_run'] = item['Wind_Run'];
+                    newItem['hi_speed'] = item['Hi_Speed'];
+                    newItem['hi_dir'] = item['Hi_Dir'];
+                    newItem['wind_cod_dom'] = item['Wind_Cod_Dom'];
+                    newItem['wind_chill'] = item['Wind_Chill'];
+                    newItem['index_heat'] = item['Heat_Index'];
+                    newItem['index_thw'] = item['THW_Index'];
+                    newItem['index_thsw'] = item['THSW_Index'];
+                    newItem['presion_relativa'] = item['Bar'];
+                    newItem['rain'] = item['Rain'];
+                    newItem['lluvia_hora'] = item['Rain_Rate'];
+                    newItem['solar_rad'] = item['Solar_Rad.'];
+                    newItem['solar_energy'] = item['Solar_Energy'];
+                    newItem['radsolar_max'] = item['Hi_Solar_Rad.'];
+                    newItem['uv_index'] = item['UV_Index'];
+                    newItem['uv_dose'] = item['UV_Dose'];
+                    newItem['uv_max'] = item['Hi_UV'];
+                    newItem['heat_days_d'] = item['Heat_D-D'];
+                    newItem['cool_days_d'] = item['Cool_D-D'];
+                    newItem['in_dew'] = item['In_Dew'];
+                    newItem['in_heat'] = item['In_Heat'];
+                    newItem['in_emc'] = item['In_EMC'];
+                    newItem['in_air_density'] = item['In_Air_Density'];
+                    newItem['evapotran'] = item['ET'];
+                    newItem['soil_1_moist'] = item['Soil_1_Moist.'];
+                    newItem['soil_2_moist'] = item['Soil_2_Moist.'];
+                    newItem['leaf_wet1'] = item['Leaf_Wet_1'];
+                    newItem['wind_samp']=item['Wind_Samp'];
+                    newItem['wind_tx'] = item['Wind_Tx'];
+                    newItem['iss_recept'] = item['ISS_Recept'];
+                    newItem['intervalo'] = item['Arc._Int.'];
+                    newItem['temperatura_interna'] = item['In_Temp'];
+                    newItem['humedad_interna'] = item['In_Hum'];
+                    newItem['direccion_del_viento'] = item['Wind_Dir'];
+                    newItem['velocidad_viento'] =item['Wind_Speed'];
+                    newItem['punto_rocio'] = item['Dew_Pt.'];
+                    newItem['humedad_externa'] = item['Out_Hum'];
+                    newItem['temperatura_externa'] = item['Temp_Out'];
+                }
+
+
+            if (err) throw err;
+
+            insertToTable(connection,newItem,processResult);
+
+            // return the newItem (adds to array returned from map)
+            //return newItem;
+        })
+        // parsedData now has the correct columns for import;
+
+        
+        //insertToTable(connection,parsedData);
+
+
+    })
+
 }
 
 
+
 main();
+
+async function insertToTable(connection, newItem,callback){
+    //Select all customers and return the result object:
+    connection.query("INSERT INTO `chinas-davis` SET ?;", newItem, function (err, result, fields){
+        if (err) {
+            console.log("err",err);
+        }
+        else {
+            callback(null,result);
+        }
+    });
+}
+
+function processResult(err,result){
+    console.log(result)
+}
+//*** Stuff below here is only for when we want to run this on a server ***//
+//
+//
+// const app = express()
+
+// app.use(express.static('public'))
+// app.use(bodyParser.json())
+
+
+
+
+//async function insertToTable(connection, parsedData){
+
+    //for import, values must be in a nested array (in the correct order);
+   // console.log(parsedData[0]);
+
+
+
+   //const columnHeaders = Object.keys(parsedData[0]);
+
+    //for the INSERT statement, column headers need to be a string in the format (`col1`, `col2`, `col3` etc).
+   // let columnString = columnHeaders.join("`,`")
+    //add the brackets and ` to the start and end of the string
+    //columnString = "(`"+columnString+"`)";
+
+    // prepare values as nested array;
+
+
+   // const insertValues = parsedData.map( (item,index) => {
+    //    return Object.values(item);
+  //  })
+
+    // console.log("insertingValues",insertValues);
+
+    
+
+    //divide a half file and run 
+   //let valueTot = Number(insertValues.length)
+    //console.log("valuetot ",valueTot / 10000)
+    //let limit = 10000
+  //  let partialInsert = insertValues.slice(144001,144563)
+
+    
+   // for(i = 0; i <= valueTot - 1 ; i = limit+1){
+
+    //    partialInsert = insertValues.slice(i, limit * 2);
+
+ //    limit = limit*2
+        
+//}
+
+    // prepare queryString (including column headers as string).
+//    const queryString = "INSERT INTO `chinas-davis` " + columnString + " VALUES ?"; //chinas-davis
+
+
+    //Select all customers and return the result object:
+ //   connection.query(queryString, [insertValues], function (err, result, fields){ //partialInsert
+//        if (err) {
+ //           console.log("err",err);
+  //          write("./_data/error.txt",err);
+ //           connection.release();
+  //      }
+  //      else {
+  //          console.log("result:", result);
+  //          console.log("done");
+  //          connection.release();
+    //    }
+   // });
+//}
 
 
 //*** Stuff below here is only for when we want to run this on a server ***//
