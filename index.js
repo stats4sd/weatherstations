@@ -1,15 +1,14 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const fs = require('fs');
-// const csv=require('csvtojson')
-const request=require('request')
-const d3 = require('d3-dsv')
-
+const csv=require('csvtojson')
+const request=require('request');
+const d3 = require('d3-dsv');
 var mysql = require('mysql');
+const math = require('mathjs');
+const iconv = require('iconv-js');
+const config = require('./config');
 
-const math = require('mathjs')
-
-const config = require('./config')
 
 var con = mysql.createConnection({
     host: "localhost",
@@ -41,7 +40,7 @@ var con_dates = mysql.createPool({
 
 async function read(path,encoding) {
     return new Promise((resolve, reject) => {
-        fs.readFile(path, encoding, (err, data) => { // utf16le or utf8
+        fs.readFile(path, encoding, (err, data) => { //encoding
             if (err){
                 throw err;
             }
@@ -71,100 +70,69 @@ async function write(path,content) {
 async function main() {
 
     // const path = "./_data/Datos estacion Calahuancane.csv";
-    const path = "C:/Users/LuciaFalcinelli/Documents/GitHub/weatherstations/_data/Chinchaya.csv"
+    const path = "C:/Users/LuciaFalcinelli/Documents/GitHub/weatherstations/_data/Chinchaya (14_09_2018).csv"; 
+    let rawData = [];
 
-    const rawData = await read(path,"utf8");//utf8 or utf18le codeutf
+    try{
+        rawData = await read(path, "utf16le");
+    }
+    catch(err){
+        rawData = await read(path, "utf8");
+    }
 
-
-
-
-    //check comma or space
-
-    let title = Object.keys(rawData[8])
-    console.log(title)
-    let typeofTable = true;
-
-    if(rawData[0].indexOf(',') > -1) {
-            typeOfTable = false;
-
-        }
-        else if(rawData[0].indexOf('|') > -1){
-           typeOfTable = true;
-        }
-console.log(typeofTable)
-   
-    let parsedData = d3.csvParse(rawData);
-        if(typeofTable){ 
-        parsedData = d3.tsvParse(rawData); // csv or tsc
-          }else if(!typeofTable){
+    for(i = 0; i <= 10; i++){
+        if(rawData[i] == ","){
             parsedData = d3.csvParse(rawData);
+            csvFormat = true;
+        }else if(rawData[i] == '\t'){            
+            parsedData = d3.tsvParse(rawData);
+            csvFormat = false;    
+        }
 
-   }   
-
-
-
+    }
+  
+  
     let numberOne = [];
     let numberTwo = [];
     let dateArray = [];
     let dates = [];
     let isoDates = [];
 
-    // check if file is from Davis(True) or China(False) Station
+    // checks if file is from Davis(True) or China(False) Station
 
     let typeOfStation = true
     let countColumn = Object.keys(parsedData[0]).length
 
-
     if(countColumn > 40 ){
-
         typeOfStation = true ;
-
-         }else{
-
-            typeOfStation = false;
-        
+    }else{
+        typeOfStation = false;       
     }
 
-    //creates column Fecha/Hora in file davis
+    //creates Fecha/Hora column in file davis
 
     if(typeOfStation){
-        parsedData = parsedData.map( (item, index) => {
-           
+        parsedData = parsedData.map( (item, index) => {      
         const date = item["Date"];
         const hour = item["Time"];
- 
         item["Fecha/Hora"] = date + " " + hour;
-
-
         return item
-        
         })
     }
 
-
-
-
-
-   // console.log(parsedData)
-
     parsedData = parsedData.map( (item,index) => {
 
-
         Object.keys(item).forEach((key,i) => {
-            
-
             //remove excess properties
             if(key.trim() != key) {
                 item[key.trim()] = item[key];
                 delete item[key];
-
-
             }
         })
         
         const date = item["Fecha/Hora"];
    
-        // check if '/' or '-' exist and create an array with the following elements: dd, mm, yyyy hh:mm:ss
+        //checks if '/' or '-' exist and create an array with the following elements: dd, mm, yyyy hh:mm:ss
         if(date.indexOf('/') > -1) {
             dateArray = date.split('/');
         }
@@ -172,39 +140,32 @@ console.log(typeofTable)
             dateArray = date.split('-');
         }
 
-        
-
-
-        // replace a.m. and p.m. with AM and PM
+        //replaces a.m. and p.m. with AM and PM
            
         dateArray[2] = dateArray[2].replace("a.m.", "AM")
         dateArray[2] = dateArray[2].replace("p.m.", "PM")
 
-        // remove whitespace from both sides of a string
+        //removes whitespace from both sides of a string
 
         dates.push(dateArray[0].trim())
         dates.push(dateArray[1].trim())
         dates.push(dateArray[2].trim())
 
-        // create two arrays with days and months of dateArray   
+        //creates two arrays with days and months of dateArray   
 
         numberOne.push(Number(dateArray[0]))
         numberTwo.push(Number(dateArray[1]))
-        //console.log("number 1 ",numberOne)
-        //console.log("number 2 ",numberTwo)
 
         return item
     })
 
-    //calculate standard deviation between months and days 
+    //calculates standard deviation between months and days 
 
     var numOneStd = math.std(numberOne);
     var numTwoStd = math.std(numberTwo);
-  
-    //console.log(numTwoStd)
-    //console.log(numOneStd)
 
-    // returns a string with the following order: mm, dd, yyyy hh:mm:ss 
+    //returns a string with the following structure: mm, dd, yyyy hh:mm:ss, etc. 
+
     for (var i = 0; i <= dates.length - 1; i += 3) {
 
         if (numOneStd > numTwoStd ) {
@@ -218,29 +179,21 @@ console.log(typeofTable)
             dates[i+1] = dates[i+1]
             dates[i+2] = dates[i+2]
 
-
-        }
-
- 
+        } 
     } 
 
-
-
-      // check month and hour length and adds 0 where it is missing 
+      //checks month and hour length and adds 0 where it is missing 
 
         parsedData = parsedData.map((item, index) => {
          
-            length = dates[index].length
-            //console.log("length", length)
+            length = dates[index].length;
            
             if(length == 1){
-                dates[index] = "0" + dates[index]
-            } else if (length == 15){
-                dates[index] = dates[index].substring(0, 5) + "0" + dates[index].substring(5, 15)
-
+                dates[index] = "0" + dates[index];
+            }else if (length == 15){
+                dates[index] = dates[index].substring(0, 5) + "0" + dates[index].substring(5, 15);
 
             }
-
 
             return item
 
@@ -251,19 +204,18 @@ console.log(typeofTable)
         // returns an arrays with dates in ISO format (yyyy-mm-dd hh:mm:ss)  
         for (var i = 0; i <= dates.length - 1; i += 3) {
 
-            let dateString =dates[i] + "-" + dates[i+1] + "-" + dates[i+2] + " GMT";
+            let dateString = dates[i] + "-" + dates[i+1] + "-" + dates[i+2] + " GMT";
         
-            const parsedDate = new Date(dateString)
+            const parsedDate = new Date(dateString);
             dateString = parsedDate.toISOString();
-            dateString = dateString.replace("T"," ")
-            dateString = dateString.replace("Z", "")
-            isoDates.push(dateString)
-
+            dateString = dateString.replace("T"," ");
+            dateString = dateString.replace("Z", "");
+            isoDates.push(dateString);
 
     }
 
     
-        // substitute ISO format dates in the Fecha/Hora column  
+        // substitutes ISO format dates in the Fecha/Hora column  
         parsedData = parsedData.map((item, index) =>{
 
             item["Fecha/Hora"] = isoDates[index] 
@@ -273,48 +225,18 @@ console.log(typeofTable)
     })
 
 
+        let 
 
 
-    // create new file with new dates
-
-  //  const outData = d3.csvFormat(parsedData);
-
-   // const newPath = "./_data/Dates.csv"
-
-    //await write(newPath, outData);
-
-    // console.log("parsed data is ", JSON.stringify(parsedData) )
-
-
-    // con.connect(function(err){
-
-
-    //     if (err) throw err;
-    //     //Select all customers and return the result object:
-    //     con.query("INSERT INTO `chinas-davis` SET ?", parsedData, function (err, result, fields){
-    //     if (err) throw err;
-    //     console.log(result);
-    //     });
-    // });
-
-
-
-// strat second part
-
-  //  const path_dates = d3.csvFormat(parsedData);
-
-  //  const rawData_dates = await read(path_dates);
-
- //   let parsedData_dates = d3.csvParse(rawData_dates);
 
     con_dates.getConnection((err, connection) => {
 
         if (err) throw err;
 
-        //test with just intervalo
         parsedData = parsedData.map( (item, index) => {
             var newItem = {}
 
+            // passes data into the corresponding database columns for China station 
 
             if(!typeOfStation){
                 newItem['intervalo'] = item['Intervalo'];
@@ -338,7 +260,7 @@ console.log(typeofTable)
 
                     }else if(typeOfStation){
             
-            // data from MODDatos estacion Calahuancane
+            // passes data into the corresponding database columns for Davis station 
             
                     newItem['fecha_hora'] = item['Fecha/Hora'];
                     newItem['hi_temp'] = item['Hi_Temp'];
@@ -431,46 +353,6 @@ function processResult(err,result){
 
 
 
-
-//async function insertToTable(connection, parsedData){
-
-    //for import, values must be in a nested array (in the correct order);
-   // console.log(parsedData[0]);
-
-
-
-   //const columnHeaders = Object.keys(parsedData[0]);
-
-    //for the INSERT statement, column headers need to be a string in the format (`col1`, `col2`, `col3` etc).
-   // let columnString = columnHeaders.join("`,`")
-    //add the brackets and ` to the start and end of the string
-    //columnString = "(`"+columnString+"`)";
-
-    // prepare values as nested array;
-
-
-   // const insertValues = parsedData.map( (item,index) => {
-    //    return Object.values(item);
-  //  })
-
-    // console.log("insertingValues",insertValues);
-
-    
-
-    //divide a half file and run 
-   //let valueTot = Number(insertValues.length)
-    //console.log("valuetot ",valueTot / 10000)
-    //let limit = 10000
-  //  let partialInsert = insertValues.slice(144001,144563)
-
-    
-   // for(i = 0; i <= valueTot - 1 ; i = limit+1){
-
-    //    partialInsert = insertValues.slice(i, limit * 2);
-
- //    limit = limit*2
-        
-//}
 
     // prepare queryString (including column headers as string).
 //    const queryString = "INSERT INTO `chinas-davis` " + columnString + " VALUES ?"; //chinas-davis
