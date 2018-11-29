@@ -71,15 +71,17 @@ async function main() {
 
     // const path = "./_data/Datos estacion Calahuancane.csv";
     const path = "C:/Users/LuciaFalcinelli/Documents/GitHub/weatherstations/_data/Chinchaya (14_09_2018).csv"; 
-    let rawData = [];
+    let rawData  = [] //await read(path, "utf16le");
 
+    // checks if file is utf16l3 encoding or utf8 encoding
     try{
         rawData = await read(path, "utf16le");
     }
     catch(err){
         rawData = await read(path, "utf8");
     }
-
+    
+    // checks if file is csv format or tsv format
     for(i = 0; i <= 10; i++){
         if(rawData[i] == ","){
             parsedData = d3.csvParse(rawData);
@@ -225,11 +227,7 @@ async function main() {
     })
 
 
-        let 
-
-
-
-    con_dates.getConnection((err, connection) => {
+        con_dates.getConnection((err, connection) => {
 
         if (err) throw err;
 
