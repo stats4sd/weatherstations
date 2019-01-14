@@ -27,7 +27,7 @@ const dbUser = process.env.SQL_USER || config.config.username;
 const dbPassword = process.env.SQL_PASSWORD || config.config.password;
 const dbName = process.env.SQL_NAME || config.config.database;
 
-const handle = require('handle.js');
+const handle = require('./handle.js');
 
 const mysqlConfig = {
   connectionLimit: 1,

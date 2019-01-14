@@ -1,3 +1,17 @@
+const path = require('path');
+const os = require('os');
+const fs = require('fs');
+const d3 = require('d3-dsv');
+
+const express = require('express');
+const bodyParser = require('body-parser');
+const csv = require('csvtojson')
+const request = require('request');
+const mysql = require('mysql');
+const math = require('mathjs');
+const iconv = require('iconv-js');
+const config = require('./config');
+const chardet = require('chardet');
 
 exports.handle = async function (path) {
     console.log("HANDLING FILE", path)
