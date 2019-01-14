@@ -1,47 +1,67 @@
+/**
+ * Parses a 'multipart/form-data' upload request
+ *
+ * @param {Object} req Cloud Function request context.
+ * @param {Object} res Cloud Function response context.
+ */
+const path = require('path');
+const os = require('os');
+const fs = require('fs');
+const d3 = require('d3-dsv');
+
 const express = require('express');
 const bodyParser = require('body-parser');
-const fs = require('fs');
-const csv=require('csvtojson')
-const request=require('request');
-const d3 = require('d3-dsv');
-var mysql = require('mysql');
+const csv = require('csvtojson')
+const request = require('request');
+const mysql = require('mysql');
 const math = require('mathjs');
 const iconv = require('iconv-js');
 const config = require('./config');
+const chardet = require('chardet');
 
+// Node.js doesn't have a built-in multipart/form-data parsing library.
+// Instead, we can use the 'busboy' library from NPM to parse these requests.
+const Busboy = require('busboy');
+const connectionName = process.env.INSTANCE_CONNECTION_NAME || 'weatherstation';
+const dbUser = process.env.SQL_USER || config.config.username;
+const dbPassword = process.env.SQL_PASSWORD || config.config.password;
+const dbName = process.env.SQL_NAME || config.config.database;
+
+const mysqlConfig = {
+  connectionLimit: 1,
+  user: dbUser,
+  password: dbPassword,
+  database: dbName,
+};
+if (process.env.NODE_ENV === 'production') {
+  mysqlConfig.socketPath = `/cloudsql/${connectionName}`;
+}
 
 var con = mysql.createConnection({
-    host: "localhost",
-    user: config.config.username,
-    password: config.config.password,
-    database: config.config.database
+    //host: "localhost",
+    user: dbUser,
+    password: dbPassword,
+    database: dbName,
 });
 
 var con_dates = mysql.createPool({
-    host: "localhost",
-    user: config.config.username,
-    password: config.config.password,
-    database: config.config.database
+   //host: "localhost"
+    user: dbUser,
+    password: dbPassword,
+    database: dbName,
 });
-
-
-// *****************************************************
-// Define Read / Write Functions
-// *****************************************************
-
-
-
 
 
 // reads data from file
 // Requires:
 //  - path: path to file (string)
-
-
-async function read(path,encoding) {
+async function read(path, encoding) {
     return new Promise((resolve, reject) => {
-        fs.readFile(path, encoding, (err, data) => { //encoding
+        fs.readFile(path, encoding, (err, data) => {
+
+
             if (err){
+                console.log("read error ",err);
                 throw err;
             }
             resolve(data);
@@ -49,37 +69,87 @@ async function read(path,encoding) {
     });
 }
 
-// Function for writing files
-// Requires:
-//  - path: path to file to write (string)
-//  - content: the contents of the file (string)
-async function write(path,content) {
-    return new Promise((resolve,reject) => {
-        fs.writeFile(path,content, (err) => {
-            if (err) {
-                throw err;
-            }
-            console.log("file saved to path ", path);
-        })
-    })
-}
 
 
-// main function to run.
-// This is wrapped in an "async" function to allow the read/write functions to work with "await" command.
-async function main() {
+exports.uploadFile = (req, res) => {
+  if (req.method === 'POST') {
+    const busboy = new Busboy({headers: req.headers});
+    const tmpdir = os.tmpdir();
 
-    // const path = "./_data/Datos estacion Calahuancane.csv";
-    const path = "C:/Users/LuciaFalcinelli/Documents/GitHub/weatherstations/_data/Chinchaya (14_09_2018).csv";
-    let rawData  = [] //await read(path, "utf16le");
+    // This object will accumulate all the fields, keyed by their name
+    const fields = {};
 
-    // checks if file is utf16l3 encoding or utf8 encoding
-    try{
-        rawData = await read(path, "utf16le");
-    }
-    catch(err){
+    // This object will accumulate all the uploaded files, keyed by their name.
+    const uploads = {};
+
+    // This code will process each non-file field in the form.
+    busboy.on('field', (fieldname, val) => {
+      // TODO(developer): Process submitted field values here
+      console.log(`Processed field ${fieldname}: ${val}.`);
+      fields[fieldname] = val;
+    });
+
+    let fileWrites = [];
+
+    // This code will process each file uploaded.
+    busboy.on('file', (fieldname, file, filename) => {
+      // Note: os.tmpdir() points to an in-memory file system on GCF
+      // Thus, any files in it must fit in the instance's memory.
+      console.log(`Processed file ${filename}`);
+      const filepath = path.join(tmpdir, filename);
+      uploads[fieldname] = filepath;
+
+      const writeStream = fs.createWriteStream(filepath);
+      file.pipe(writeStream);
+
+      //handle(file);
+
+      // File was processed by Busboy; wait for it to be written to disk.
+      const promise = new Promise((resolve, reject) => {
+        file.on('end', () => {
+          writeStream.end();
+        });
+        writeStream.on('finish', resolve);
+        writeStream.on('error', reject);
+      });
+      fileWrites.push(promise);
+    });
+
+    // Triggered once all uploaded files are processed by Busboy.
+    // We still need to wait for the disk writes (saves) to complete.
+    busboy.on('finish', () => {
+      Promise.all(fileWrites).then(() => {
+        for (const name in uploads) {
+          const file = uploads[name];
+          //fs.unlinkSync(file);
+
+
+          handle(file)
+        }
+        res.send();
+      });
+    });
+
+    busboy.end(req.rawBody);
+  } else {
+    // Return a "method not allowed" error
+    res.status(405).end();
+  }
+};
+
+async function handle(path) {
+    console.log("HANDLING FILE", path)
+    // start file processing here...
+    let encoding = chardet.detectFileSync(path);
+    //console.log("encoding ",encoding)
+    let rawData  = [];
+
+    //checks if file is utf16l3 encoding or utf8 encoding
+    if(encoding=="UTF-8" || encoding == "ISO-8859-1"){
         rawData = await read(path, "utf8");
-    }
+    }else if(encoding == "UTF-16LE"){
+        rawData = await read(path, "utf16le");
+    };
 
     // checks if file is csv format or tsv format
     for(i = 0; i <= 10; i++){
@@ -320,11 +390,11 @@ async function main() {
 
     })
 
-}
 
 
 
-main();
+
+//main();
 
 async function insertToTable(connection, newItem,callback){
     //Select all customers and return the result object:
@@ -341,50 +411,19 @@ async function insertToTable(connection, newItem,callback){
 function processResult(err,result){
     console.log(result)
 }
-//*** Stuff below here is only for when we want to run this on a server ***//
-//
-//
-// const app = express()
-
-// app.use(express.static('public'))
-// app.use(bodyParser.json())
 
 
+  // rawData = read(path);
+  //         parsedData = d3.tsvParse(rawData)
 
+  // console.log("THE FILE IS BEING HANDLED!!!!");
 
-    // prepare queryString (including column headers as string).
-//    const queryString = "INSERT INTO `chinas-davis` " + columnString + " VALUES ?"; //chinas-davis
+  // console.log("Parsed Data = ", parsedData);
 
-
-    //Select all customers and return the result object:
- //   connection.query(queryString, [insertValues], function (err, result, fields){ //partialInsert
-//        if (err) {
- //           console.log("err",err);
-  //          write("./_data/error.txt",err);
- //           connection.release();
-  //      }
-  //      else {
-  //          console.log("result:", result);
-  //          console.log("done");
-  //          connection.release();
-    //    }
-   // });
-//}
-
-
-//*** Stuff below here is only for when we want to run this on a server ***//
-//
-//
-// const app = express()
-
-// app.use(express.static('public'))
-// app.use(bodyParser.json())
+}
 
 
 
 
 
 
-// app.listen(7555, () => {
-//     console.log("Server running on http://localhost:7555");
-// })
