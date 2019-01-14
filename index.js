@@ -22,57 +22,11 @@ const chardet = require('chardet');
 // Node.js doesn't have a built-in multipart/form-data parsing library.
 // Instead, we can use the 'busboy' library from NPM to parse these requests.
 const Busboy = require('busboy');
-const connectionName = process.env.INSTANCE_CONNECTION_NAME || 'weatherstation';
-const dbUser = process.env.SQL_USER || config.config.username;
-const dbPassword = process.env.SQL_PASSWORD || config.config.password;
-const dbName = process.env.SQL_NAME || config.config.database;
-
 const handle = require('./handle.js');
 
-const mysqlConfig = {
-  connectionLimit: 1,
-  user: dbUser,
-  password: dbPassword,
-  database: dbName,
-};
-if (process.env.NODE_ENV === 'production') {
-  mysqlConfig.socketPath = `/cloudsql/${connectionName}`;
-}
-
-var con = mysql.createConnection({
-    //host: "localhost",
-    user: dbUser,
-    password: dbPassword,
-    database: dbName,
-});
-
-var con_dates = mysql.createPool({
-   //host: "localhost"
-    user: dbUser,
-    password: dbPassword,
-    database: dbName,
-});
 
 
-// reads data from file
-// Requires:
-//  - path: path to file (string)
-async function read(path, encoding) {
-    return new Promise((resolve, reject) => {
-        fs.readFile(path, encoding, (err, data) => {
-
-
-            if (err){
-                console.log("read error ",err);
-                throw err;
-            }
-            resolve(data);
-        });
-    });
-}
-
-
-exports.uploadFile = (req, res) => {
+exports.uploadFile = async (req, res) => {
   if (req.method === 'POST') {
     const busboy = new Busboy({headers: req.headers});
     const tmpdir = os.tmpdir();
@@ -103,8 +57,6 @@ exports.uploadFile = (req, res) => {
       const writeStream = fs.createWriteStream(filepath);
       file.pipe(writeStream);
 
-      //handle(file);
-
       // File was processed by Busboy; wait for it to be written to disk.
       const promise = new Promise((resolve, reject) => {
         file.on('end', () => {
@@ -119,21 +71,26 @@ exports.uploadFile = (req, res) => {
     // Triggered once all uploaded files are processed by Busboy.
     // We still need to wait for the disk writes (saves) to complete.
     busboy.on('finish', () => {
-      Promise.all(fileWrites).then(() => {
+      Promise.all(fileWrites).then(async () => {
         for (const name in uploads) {
           const file = uploads[name];
           //fs.unlinkSync(file);
+          console.log("file = ", file)
 
-
-          handle.handle(file)
+          handledFile = await handle.handle(file);
+          console.log("handled File response - ", handledFile);
         }
+
         res.send();
+
       });
     });
 
-    busboy.end(req.rawBody);
+  busboy.end(req.rawBody);
+
   } else {
     // Return a "method not allowed" error
+    console.log("NOPE");
     res.status(405).end();
   }
 };
