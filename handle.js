@@ -264,7 +264,7 @@ exports.handle = async function (path) {
 
     if(!dbPool){
         try {
-             v = db.con_dates;
+             dbPool = db.con_dates;
         }
         catch(err) {
             console.log("error in dbPool making");
@@ -273,9 +273,9 @@ exports.handle = async function (path) {
     }
 
 
-    await parallelInserts(parsedData, dbPool);
+    let output = await parallelInserts(parsedData, dbPool);
 
-    return "done";
+    return output;
     // parsedData now has the correct columns for import;
     //insertToTable(connection,parsedData);
 }
@@ -285,11 +285,16 @@ async function parallelInserts(parsedData, pool) {
     var i, tempArray, chunk = 1000;
     console.log("ParsedData Length ", parsedData.length)
 
+    var promises = [];
+
     for(i=0; i<parsedData.length; i+chunk){
         console.log("chunking data starting at ", i);
         tempArray = parsedData.slice(i,i+=chunk);
-        insertToTable(parsedData,pool);
+        promises.push(insertToTable(tempArray,pool));
     }
+
+    await Promise.all(promises);
+    return 'inserts done';
 
 }
 
@@ -308,7 +313,10 @@ async function insertToTable(parsedData,pool){
     console.log("inserting into table");
     try {
         connection = await pool.getConnection();
+        console.log("connection got");
+
         await connection.beginTransaction();
+        console.log("transaction begun");
 
         var count = 0;
         for(const row of parsedData){
@@ -322,6 +330,7 @@ async function insertToTable(parsedData,pool){
     }
 
     catch(err) {
+        console.log("ERROR" , err);
         console.log("rolling back");
         await connection.rollback();
         throw err;
