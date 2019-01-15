@@ -264,7 +264,7 @@ exports.handle = async function (path) {
 
     if(!dbPool){
         try {
-            dbPool = db.con_dates;
+             v = db.con_dates;
         }
         catch(err) {
             console.log("error in dbPool making");
@@ -272,11 +272,24 @@ exports.handle = async function (path) {
         }
     }
 
-    await insertToTable(parsedData,dbPool)
+
+    await parallelInserts(parsedData, dbPool);
 
     return "done";
     // parsedData now has the correct columns for import;
     //insertToTable(connection,parsedData);
+}
+
+async function parallelInserts(parsedData, pool) {
+
+    var i, tempArray, chunk = 1000;
+
+    for(i=0; i<parsedData.length; i+chunk){
+
+        tempArray = parsedData.slice(i,i+chunk);
+        insertToTable(parsedData,pool);
+    }
+
 }
 
 

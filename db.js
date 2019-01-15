@@ -9,7 +9,7 @@ const dbPassword = process.env.SQL_PASSWORD || config.config.password;
 const dbName = process.env.SQL_NAME || config.config.database;
 
 const mysqlConfig = {
-  connectionLimit: 1,
+  connectionLimit: 10,
   user: dbUser,
   password: dbPassword,
   database: dbName,
