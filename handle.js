@@ -283,10 +283,11 @@ exports.handle = async function (path) {
 async function parallelInserts(parsedData, pool) {
 
     var i, tempArray, chunk = 1000;
+    console.log("ParsedData Length ", parsedData.length)
 
     for(i=0; i<parsedData.length; i+chunk){
-
-        tempArray = parsedData.slice(i,i+chunk);
+        console.log("chunking data starting at ", i);
+        tempArray = parsedData.slice(i,i+=chunk);
         insertToTable(parsedData,pool);
     }
 
