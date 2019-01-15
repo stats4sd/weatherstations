@@ -293,6 +293,12 @@ async function parallelInserts(parsedData, pool) {
 }
 
 
+/**
+ * Inserts multiple rows into the main database table;
+ * @param  {array} parsedData Array of JSON objects containing the data to insert
+ * @param  {object} pool       The database connection pool (using mysql2)
+ * @return {na}            Does not return anything yet. Should be edited to return number of inserted rows.)
+ */
 async function insertToTable(parsedData,pool){
 
     console.log("setting up db connection");
