@@ -77,7 +77,7 @@ exports.uploadFile = async (req, res) => {
           //fs.unlinkSync(file);
           console.log("file = ", file)
 
-          handledFile = await handle.handle(file);
+          handledFile = await handle.handle(file,fields['station'] );
           console.log("handled File response - ", handledFile);
         }
 

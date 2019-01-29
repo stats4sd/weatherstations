@@ -10,10 +10,10 @@ const dbName = process.env.SQL_NAME || config.config.database;
 
 const mysqlConfig = {
   connectionLimit: 10,
-  user: dbUser,
+host: 'localhost',  
+user: dbUser,
   password: dbPassword,
   database: dbName,
-  socketPath: `/cloudsql/${connectionName}`
 };
 
-exports.con_dates = mysql.createPool(mysqlConfig);
+exports.con_dates =  mysql.createPool(mysqlConfig);

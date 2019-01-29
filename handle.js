@@ -16,15 +16,16 @@ const chardet = require('chardet');
 const helpers = require('./helpers.js')
 const db = require('./db.js');
 
-exports.handle = async function (path) {
+exports.handle = async function (path,fieldStation) {
     console.log("HANDLING FILE", path)
+  	console.log("FIELD STATION IS ",fieldStation)
     // start file processing here...
     let encoding = chardet.detectFileSync(path);
     //console.log("encoding ",encoding)
     let rawData  = [];
 
     //checks if file is utf16l3 encoding or utf8 encoding
-    if(encoding=="UTF-8" || encoding == "ISO-8859-1"){
+    if(encoding=="UTF-8" || encoding == "ISO-8859-1"|| encoding == "ISO-8859-2"){
         rawData = await helpers.read(path, "utf8");
     }else if(encoding == "UTF-16LE"){
         rawData = await helpers.read(path, "utf16le");
@@ -176,6 +177,14 @@ exports.handle = async function (path) {
             return item
 
     })
+ 		//Create id_station column with fildStation value
+  		parsedData =  parsedData.map((item, index) => {
+
+            item['id_station'] = fieldStation
+
+            return item
+        })
+  
 
     parsedData = parsedData.map( (item, index) => {
         var newItem = {}
@@ -201,6 +210,7 @@ exports.handle = async function (path) {
             newItem['lluvia_semana'] = item['Lluvia semana(mm)'];
             newItem['lluvia_mes'] = item['Lluvia mes(mm)'];
             newItem['lluvia_total'] = item['Lluvia Total(mm)'];
+          	newItem['id_station'] = item['id_station'];
 
                 }
         else if(typeOfStation){
@@ -249,11 +259,12 @@ exports.handle = async function (path) {
             newItem['punto_rocio'] = item['Dew_Pt.'];
             newItem['humedad_externa'] = item['Out_Hum'];
             newItem['temperatura_externa'] = item['Temp_Out'];
+          	newItem['id_station'] = item['id_station'];
 
         }
 
 
-        // insertToTable(dbPool,newItem,processResult);
+         //insertToTable(newItem,connection);
 
         // return the newItem (adds to array returned from map)
         return newItem;
@@ -277,7 +288,7 @@ exports.handle = async function (path) {
 
     return output;
     // parsedData now has the correct columns for import;
-    //insertToTable(connection,parsedData);
+    insertToTable(parsedData,dbPool);
 }
 
 async function parallelInserts(parsedData, pool) {
@@ -321,8 +332,8 @@ async function insertToTable(parsedData,pool){
         var count = 0;
         for(const row of parsedData){
             count++
-            console.log("count = ", count);
-            await connection.query('INSERT INTO `chinas-davis` SET ?;', row)
+            // console.log("count = ", count);
+            await connection.query('INSERT INTO `data` SET ?;', row)
         }
 
         console.log("committing");
