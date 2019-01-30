@@ -1,94 +1,102 @@
+/**
+ * Parses a 'multipart/form-data' upload request
+ *
+ * @param {Object} req Cloud Function request context.
+ * @param {Object} res Cloud Function response context.
+ */
+const path = require('path');
+const os = require('os');
+const fs = require('fs');
+const d3 = require('d3-dsv');
+
 const express = require('express');
 const bodyParser = require('body-parser');
-const fs = require('fs');
-// const csv=require('csvtojson')
-const request=require('request')
-const d3 = require('d3-dsv')
+const csv = require('csvtojson')
+const request = require('request');
+const mysql = require('mysql');
+const math = require('mathjs');
+const iconv = require('iconv-js');
+const config = require('./config');
+const chardet = require('chardet');
+
+// Node.js doesn't have a built-in multipart/form-data parsing library.
+// Instead, we can use the 'busboy' library from NPM to parse these requests.
+const Busboy = require('busboy');
+const handle = require('./handle.js');
 
 
-// *****************************************************
-// Define Read / Write Functions
-// *****************************************************
 
+exports.uploadFile = async (req, res) => {
+  if (req.method === 'POST') {
+    const busboy = new Busboy({headers: req.headers});
+    const tmpdir = os.tmpdir();
 
-// reads data from file
-// Requires:
-//  - path: path to file (string)
-async function read(path) {
-    return new Promise((resolve, reject) => {
-        fs.readFile(path, "utf16le", (err, data) => {
-            if (err){
-                throw err;
-            }
-            resolve(data);
-        });
+    // This object will accumulate all the fields, keyed by their name
+    const fields = {};
+
+    // This object will accumulate all the uploaded files, keyed by their name.
+    const uploads = {};
+
+    // This code will process each non-file field in the form.
+    busboy.on('field', (fieldname, val) => {
+      // TODO(developer): Process submitted field values here
+      console.log(`Processed field ${fieldname}: ${val}.`);
+      fields[fieldname] = val;
     });
-}
 
-// Function for writing files
-// Requires:
-//  - path: path to file to write (string)
-//  - content: the contents of the file (string)
-async function write(path,content) {
-    return new Promise((resolve,reject) => {
-        fs.writeFile(path,content, (err) => {
-            if (err) {
-                throw err;
-            }
-            console.log("file saved to path ", path);
-        })
-    })
-}
+    let fileWrites = [];
 
+    // This code will process each file uploaded.
+    busboy.on('file', (fieldname, file, filename) => {
+      // Note: os.tmpdir() points to an in-memory file system on GCF
+      // Thus, any files in it must fit in the instance's memory.
+      console.log(`Processed file ${filename}`);
+      const filepath = path.join(tmpdir, filename);
+      uploads[fieldname] = filepath;
 
-// main function to run.
-// This is wrapped in an "async" function to allow the read/write functions to work with "await" command.
-async function main() {
+      const writeStream = fs.createWriteStream(filepath);
+      file.pipe(writeStream);
 
-    // const path = "./_data/Datos estacion Calahuancane.csv";
-    const path = "./_data/Chinchaya (14_09_2018).csv"
+      // File was processed by Busboy; wait for it to be written to disk.
+      const promise = new Promise((resolve, reject) => {
+        file.on('end', () => {
+          writeStream.end();
+        });
+        writeStream.on('finish', resolve);
+        writeStream.on('error', reject);
+      });
+      fileWrites.push(promise);
+    });
 
-    const rawData = await read(path);
+    // Triggered once all uploaded files are processed by Busboy.
+    // We still need to wait for the disk writes (saves) to complete.
+    busboy.on('finish', () => {
+      Promise.all(fileWrites).then(async () => {
+        for (const name in uploads) {
+          const file = uploads[name];
+          //fs.unlinkSync(file);
+          console.log("file = ", file)
 
-    let parsedData = d3.tsvParse(rawData);
+          handledFile = await handle.handle(file,fields['station'] );
+          console.log("handled File response - ", handledFile);
+        }
 
-    parsedData = parsedData.map( (item,index) => {
+        res.send();
 
-        const date = item["Fecha/Hora"];
+      });
+    });
 
-        // hack for now - assume WHATEVER date comes in is "GMT"
-        const parsedDate = new Date(date+" GMT")
+  busboy.end(req.rawBody);
 
-
-        item["Timestamp"] = parsedDate.toISOString();
-
-        return item
-    })
-
-    const outData = d3.csvFormat(parsedData);
-    const newPath = "./_data/Chinchaya(14_09_2018) - Dates.csv"
-
-    write(newPath, outData);
-
-}
-
-
-main();
-
-
-//*** Stuff below here is only for when we want to run this on a server ***//
-//
-//
-// const app = express()
-
-// app.use(express.static('public'))
-// app.use(bodyParser.json())
+  } else {
+    // Return a "method not allowed" error
+    console.log("NOPE");
+    res.status(405).end();
+  }
+};
 
 
 
 
 
 
-// app.listen(7555, () => {
-//     console.log("Server running on http://localhost:7555");
-// })
