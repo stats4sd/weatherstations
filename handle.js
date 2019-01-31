@@ -51,7 +51,7 @@ exports.handle = async function (path,fieldStation) {
             item[Object.keys(parsedData[0])[i]] =null;
             } 
             return item;
-        });
+        });            
     }
      
 
@@ -344,7 +344,7 @@ async function insertToTable(parsedData,pool){
         for(const row of parsedData){
             count++
             // console.log("count = ", count);
-            await connection.query('INSERT INTO `data` SET ?;', row)
+            await connection.query('INSERT INTO `data` SET ? ON DUPLICATE KEY UPDATE id_station = id_station;', row)
         }
 
         console.log("committing");
