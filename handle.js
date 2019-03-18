@@ -23,7 +23,7 @@ exports.handle = async function (path,fieldStation) {
     let encoding = chardet.detectFileSync(path);
     //console.log("encoding ",encoding)
     let rawData  = [];
-
+    console.log('ENCODING',encoding);
     //checks if file is utf16l3 encoding or utf8 encoding
     if(encoding=="UTF-8" || encoding == "ISO-8859-1"|| encoding == "ISO-8859-2"){
         rawData = await helpers.read(path, "utf8");
@@ -31,7 +31,10 @@ exports.handle = async function (path,fieldStation) {
         rawData = await helpers.read(path, "utf16le");
     };
 
+    //console.log(rawData);
     // checks if file is csv format or tsv format
+
+
     for(i = 0; i <= 10; i++){
         if(rawData[i] == ","){
             parsedData = d3.csvParse(rawData);
@@ -40,14 +43,17 @@ exports.handle = async function (path,fieldStation) {
             parsedData = d3.tsvParse(rawData);
             csvFormat = false;
         }
-
     }
+    console.log('CSV FORMAT', csvFormat);
 
     for(i=0; i<Object.keys(parsedData[0]).length; i++){
     
         parsedData= parsedData.map((item,index)=>{
             const checkValue = item[Object.keys(parsedData[0])[i]]
-            if(checkValue==' --.-'||checkValue==' --' || checkValue=="" || checkValue==" ---"){
+            //checkValue = checkValue.trim();
+            //console.log('CHECKVALUE', checkValue);
+            if(checkValue.trim()=='--.-'||checkValue.trim()=='--' || checkValue=="" || checkValue.trim()=="---"){
+                //console.log('CHECKVALUE', checkValue);
             item[Object.keys(parsedData[0])[i]] =null;
             } 
             return item;
@@ -65,12 +71,17 @@ exports.handle = async function (path,fieldStation) {
 
     let typeOfStation = true
     let countColumn = Object.keys(parsedData[0]).length
+    console.log('NUMBER OF COLUMNS', countColumn);
+    //console.log(parsedData[0]);
 
-    if(countColumn > 40 ){
+
+    if(countColumn > 34){
         typeOfStation = true ;
     }else{
         typeOfStation = false;
     }
+
+    console.log('DAVIS STATION', typeOfStation);
 
     //creates Fecha/Hora column in file davis
 
@@ -92,7 +103,7 @@ exports.handle = async function (path,fieldStation) {
                 delete item[key];
             }
         })
-
+        
         const date = item["Fecha/Hora"];
 
         //checks if '/' or '-' exist and create an array with the following elements: dd, mm, yyyy hh:mm:ss
@@ -128,6 +139,8 @@ exports.handle = async function (path,fieldStation) {
 
     var numOneStd = math.std(numberOne);
     var numTwoStd = math.std(numberTwo);
+
+    //console.log("standard deviation", numOneStd);
 
     //returns a string with the following structure: mm, dd, yyyy hh:mm:ss, etc.
 
