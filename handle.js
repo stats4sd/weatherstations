@@ -357,7 +357,7 @@ async function insertToTable(parsedData,pool){
         for(const row of parsedData){
             count++
             // console.log("count = ", count);
-            await connection.query('INSERT INTO `data` SET ? ON DUPLICATE KEY UPDATE id_station = id_station;', row)
+            await connection.query('INSERT INTO `data_template` SET ? ON DUPLICATE KEY UPDATE id_station = id_station;', row)
         }
 
         console.log("committing");
