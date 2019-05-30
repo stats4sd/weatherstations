@@ -24,6 +24,8 @@ exports.handle = async function (path,fieldStation) {
     //console.log("encoding ",encoding)
     let rawData  = [];
 
+    console.log('ENCODING',encoding);
+
     //checks if file is utf16l3 encoding or utf8 encoding
     if(encoding=="UTF-8" || encoding == "ISO-8859-1"|| encoding == "ISO-8859-2"){
         rawData = await helpers.read(path, "utf8");
@@ -31,7 +33,11 @@ exports.handle = async function (path,fieldStation) {
         rawData = await helpers.read(path, "utf16le");
     };
 
+
     // checks if file is csv format or tsv format
+    //console.log(rawData);
+    // checks if file is csv format or tsv format
+
     for(i = 0; i <= 10; i++){
         if(rawData[i] == ","){
             parsedData = d3.csvParse(rawData);
@@ -41,7 +47,26 @@ exports.handle = async function (path,fieldStation) {
             csvFormat = false;
         }
 
+
     }
+
+    
+    console.log('CSV FORMAT', csvFormat);
+
+    for(i=0; i<Object.keys(parsedData[0]).length; i++){
+    
+        parsedData= parsedData.map((item,index)=>{
+            const checkValue = item[Object.keys(parsedData[0])[i]]
+            //checkValue = checkValue.trim();
+            //console.log('CHECKVALUE', checkValue);
+            if(checkValue.trim()=='--.-'||checkValue.trim()=='--' || checkValue=="" || checkValue.trim()=="---"){
+                //console.log('CHECKVALUE', checkValue);
+            item[Object.keys(parsedData[0])[i]] =null;
+            } 
+            return item;
+        });            
+    }
+     
 
 
     let numberOne = [];
@@ -53,13 +78,19 @@ exports.handle = async function (path,fieldStation) {
     // checks if file is from Davis(True) or China(False) Station
 
     let typeOfStation = true
-    let countColumn = Object.keys(parsedData[0]).length
+    let countColumn = Object.keys(parsedData[0]).length;
 
-    if(countColumn > 40 ){
+
+
+    if(countColumn > 34){
+
         typeOfStation = true ;
     }else{
         typeOfStation = false;
     }
+
+    console.log('DAVIS STATION', typeOfStation);
+
 
     //creates Fecha/Hora column in file davis
 
@@ -117,6 +148,9 @@ exports.handle = async function (path,fieldStation) {
 
     var numOneStd = math.std(numberOne);
     var numTwoStd = math.std(numberTwo);
+
+
+    //console.log("standard deviation", numOneStd);
 
     //returns a string with the following structure: mm, dd, yyyy hh:mm:ss, etc.
 
@@ -333,7 +367,10 @@ async function insertToTable(parsedData,pool){
         for(const row of parsedData){
             count++
             // console.log("count = ", count);
-            await connection.query('INSERT INTO `data` SET ?;', row)
+
+
+            await connection.query('INSERT INTO `data_template` SET ? ON DUPLICATE KEY UPDATE id_station = id_station;', row)
+
         }
 
         console.log("committing");

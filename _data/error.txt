@@ -1,0 +1,1 @@
+Error: ER_TRUNCATED_WRONG_VALUE_FOR_FIELD: Incorrect decimal value: ' --.-' for column 'temperatura_externa' at row 850
